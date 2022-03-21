@@ -53,11 +53,11 @@ class TextureGenerator(nn.Module):
         modelList.append(myTConv(ngf*2, 2, ngf))
         modelList.append(myTConv(ngf*4, 2, ngf*2))
         
-        for n in range(n_layers/2):
+        for n in range(int(n_layers/2)): 
             modelList.append(myTBlock(ngf*4, p=0.0))
         # dropout to make model more robust
         modelList.append(myTBlock(ngf*4, p=0.5))
-        for n in range(n_layers/2+1,n_layers):
+        for n in range(int(n_layers/2)+1,n_layers):
             modelList.append(myTBlock(ngf*4, p=0.0))  
         
         modelList.append(ConvTranspose2d(out_channels=ngf*2, kernel_size=4, stride=2, padding=0, in_channels=ngf*4))
@@ -130,12 +130,12 @@ class GlyphGenerator(nn.Module):
         encoder.append(myGConv(ngf*4, 2, ngf*2))
 
         transformer = []
-        for n in range(n_layers/2-1):
+        for n in range(int(n_layers/2)-1):
             transformer.append(myGCombineBlock(ngf*4,p=0.0))
         # dropout to make model more robust    
         transformer.append(myGCombineBlock(ngf*4,p=0.5))
         transformer.append(myGCombineBlock(ngf*4,p=0.5))
-        for n in range(n_layers/2+1,n_layers):
+        for n in range(int(n_layers/2)+1,n_layers):
             transformer.append(myGCombineBlock(ngf*4,p=0.0))  
         
         decoder = []
@@ -174,6 +174,7 @@ class GlyphGenerator(nn.Module):
 class myBlur(nn.Module):
     def __init__(self, kernel_size=121, channels=3):
         super(myBlur, self).__init__()
+        kernel_size = int(int(kernel_size/2)*2)+1
         self.kernel_size=kernel_size
         self.channels = channels
         self.GF = nn.Conv2d(in_channels=channels, out_channels=channels,
@@ -182,7 +183,7 @@ class myBlur(nn.Module):
         x_grid = x_cord.repeat(self.kernel_size).view(self.kernel_size, self.kernel_size)
         y_grid = x_grid.t()
         self.xy_grid = torch.stack([x_grid, y_grid], dim=-1)
-        self.mean = (self.kernel_size - 1)/2
+        self.mean = (self.kernel_size - 1)//2
         self.diff = -torch.sum((self.xy_grid - self.mean)**2., dim=-1)
         self.gaussian_filter = nn.Conv2d(in_channels=self.channels, out_channels=self.channels,
                                     kernel_size=self.kernel_size, groups=self.channels, bias=False)
@@ -395,6 +396,7 @@ class SketchModule(nn.Module):
         with torch.no_grad():
             tl = self.smoothBlock(t, l, self.gpu)
             fake_text = self.transBlock(tl, label)
+            # print(tl.size(), real_label.size(), fake_text.size())
             fake_concat = torch.cat((tl, real_label, fake_text), dim=1)
         fake_output = self.D_B(fake_concat)
         real_concat = torch.cat((tl, real_label, t), dim=1)
